@@ -1,14 +1,19 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, radii, spacing, typography} from '../../theme';
 
 export function ImportBanner({message}) {
+  const insets = useSafeAreaInsets();
+
   if (!message) {
     return null;
   }
 
   return (
-    <View style={styles.banner} pointerEvents="none">
+    <View
+      style={[styles.banner, {top: Math.max(insets.top, 12) + 8}]}
+      pointerEvents="none">
       <Text style={styles.text}>{message}</Text>
     </View>
   );
@@ -17,7 +22,6 @@ export function ImportBanner({message}) {
 const styles = StyleSheet.create({
   banner: {
     position: 'absolute',
-    top: 56,
     alignSelf: 'center',
     zIndex: 50,
     backgroundColor: colors.overlayStrong,

@@ -8,12 +8,19 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "ota:release:android": "revopush release-react \"kidsreels App android\" android -d Production",
+    "ota:release:ios": "revopush release-react \"kidsreels App Ios\" ios -d Production",
+    "ota:release": "npm run ota:release:android && npm run ota:release:ios",
+    "ota:release:android:staging": "revopush release-react \"kidsreels App android\" android -d Staging",
+    "ota:release:ios:staging": "revopush release-react \"kidsreels App Ios\" ios -d Staging",
+    "ota:release:staging": "npm run ota:release:android:staging && npm run ota:release:ios:staging"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-navigation/bottom-tabs": "^7.19.2",
     "@react-navigation/native": "^7.4.1",
+    "@revopush/react-native-code-push": "^1.6.0",
     "react": "19.2.3",
     "react-native": "0.87.1",
     "react-native-create-thumbnail": "^2.2.0",
@@ -35,6 +42,7 @@
     "@react-native/jest-preset": "0.87.1",
     "@react-native/metro-config": "0.87.1",
     "@react-native/typescript-config": "0.87.1",
+    "@revopush/code-push-cli": "^0.0.13",
     "@types/jest": "^29.5.13",
     "@types/react": "^19.2.0",
     "@types/react-test-renderer": "^19.1.0",

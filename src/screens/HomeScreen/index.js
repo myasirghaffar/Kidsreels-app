@@ -45,7 +45,6 @@ export function HomeScreen() {
     <View style={styles.flex}>
       <ImportBanner message={importMessage} />
       <VideoFeed
-        key={`${videos.length}-${startIndex}`}
         videos={videos}
         initialIndex={startIndex}
         autoplay={settings.autoplay}

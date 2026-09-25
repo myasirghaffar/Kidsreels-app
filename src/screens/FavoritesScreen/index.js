@@ -1,10 +1,5 @@
 import React, {useMemo} from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {EmptyState} from '../../components/EmptyState';
@@ -15,7 +10,7 @@ import {colors, spacing, typography} from '../../theme';
 export function FavoritesScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const {videos, addFromPicker, importing} = useVideos();
+  const {videos} = useVideos();
 
   const favorites = useMemo(
     () => videos.filter(video => video.isFavorite),
@@ -26,10 +21,11 @@ export function FavoritesScreen() {
     return (
       <View style={[styles.flex, {paddingTop: insets.top}]}>
         <EmptyState
+          icon="heart"
           title="No favorites yet"
-          subtitle="Tap the heart on a video in the feed to save it here."
-          onAdd={addFromPicker}
-          loading={importing}
+          subtitle="Open Home, watch a video, and tap the ♥ heart on the right to save it here."
+          primaryLabel="Go to Home"
+          onAdd={() => navigation.navigate('Home')}
         />
       </View>
     );
@@ -43,6 +39,9 @@ export function FavoritesScreen() {
           {favorites.length} saved
         </Text>
       </View>
+      <Text style={styles.hint}>
+        Tip: tap ♥ on the Home feed to add or remove favorites
+      </Text>
       <LibraryGrid
         videos={favorites}
         selecting={false}
@@ -53,13 +52,6 @@ export function FavoritesScreen() {
         }}
         onLongPressItem={() => {}}
       />
-      <Pressable
-        onPress={() => navigation.navigate('Home')}
-        style={styles.linkBtn}
-        accessibilityRole="button"
-        accessibilityLabel="Open home feed">
-        <Text style={styles.linkText}>Watch in feed</Text>
-      </Pressable>
     </View>
   );
 }
@@ -84,15 +76,10 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
   },
-  linkBtn: {
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  linkText: {
+  hint: {
     ...typography.caption,
-    color: colors.primary,
-    fontWeight: '700',
+    color: colors.textMuted,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
   },
 });

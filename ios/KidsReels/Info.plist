@@ -4,10 +4,14 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>CodePushDeploymentKey</key>
+	<string>qL3fr3d9s5STaMPh3MrqA7ABDv15VJBIloS14l</string>
+	<key>CodePushServerURL</key>
+	<string>https://api.revopush.org</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>KidsReels</string>
+	<string>Orhan</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

@@ -24,6 +24,7 @@ Private, offline kids video player with a full-screen vertical feed. Parents add
 | Thumbnails | `react-native-create-thumbnail` |
 | Metadata | `@react-native-async-storage/async-storage` |
 | Permissions | `react-native-permissions` |
+| OTA | `@revopush/react-native-code-push` |
 
 No Expo, Firebase, Supabase, auth, API, analytics, or cloud sync.
 
@@ -145,10 +146,33 @@ Release signing matches the consumer-app pattern:
 - Alias / passwords: `android/gradle.properties` (`MYAPP_UPLOAD_*`)
 - `android/app/build.gradle` release `signingConfig` reads those properties
 
+### OTA updates (Revopush)
+
+KidsReels uses [@revopush/react-native-code-push](https://www.npmjs.com/package/@revopush/react-native-code-push) for JS/asset over-the-air updates (same pattern as the consumer app). Native binaries still need a store/APK rebuild for native changes.
+
+Revopush apps (one per platform):
+
+| Platform | Revopush app | Default channel |
+| --- | --- | --- |
+| Android | `kidsreels App android` | Production |
+| iOS | `kidsreels App Ios` | Production |
+
+Release a JS update (requires `revopush login` once):
+
+```bash
+npm run ota:release              # Android + iOS Production
+npm run ota:release:android      # Android Production only
+npm run ota:release:ios          # iOS Production only
+npm run ota:release:staging      # both Staging
+```
+
+Config lives in `src/services/ota/`. Native Production keys are in `android/.../strings.xml` and `ios/KidsReels/Info.plist`.
+
 ## Privacy
 
 - No accounts, tracking SDKs, ads, or remote analytics
 - Video data stays on-device unless the OS shares it through the system picker / Photos frameworks
+- Release builds may contact Revopush (`api.revopush.org`) only to check/download OTA JS updates
 
 ## Known platform limitations
 

@@ -8,7 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import Video from 'react-native-video';
+import Video, {ViewType} from 'react-native-video';
 import {colors} from '../../theme';
 import {VideoControls} from '../VideoControls';
 import {VideoOverlay} from '../VideoOverlay';
@@ -30,6 +30,15 @@ function VideoCardComponent({
   const [progress, setProgress] = useState(0);
   const [unavailable, setUnavailable] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [ready, setReady] = useState(false);
+
+  // Reset decode state when the source changes so poster/texture rebind correctly
+  React.useEffect(() => {
+    setReady(false);
+    setUnavailable(false);
+    setErrorMessage('');
+    setProgress(0);
+  }, [video.id, video.uri]);
 
   const paused = !isActive || !autoplay || pausedByUser || unavailable;
 
@@ -92,11 +101,18 @@ function VideoCardComponent({
           ignoreSilentSwitch="ignore"
           playInBackground={false}
           playWhenInactive={false}
+          // TextureView avoids Android black-frame + audio-only when overlays sit on top
+          useTextureView={Platform.OS === 'android'}
+          viewType={Platform.OS === 'android' ? ViewType.TEXTURE : undefined}
+          shutterColor="transparent"
+          disableFocus
+          onLoad={() => setReady(true)}
+          onReadyForDisplay={() => setReady(true)}
           onProgress={onProgress}
           onBuffer={({isBuffering}) => setBuffering(Boolean(isBuffering))}
           onError={onError}
           progressUpdateInterval={250}
-          poster={video.thumbnailUri || undefined}
+          poster={ready ? undefined : video.thumbnailUri || undefined}
           posterResizeMode="cover"
         />
       ) : (
@@ -110,7 +126,7 @@ function VideoCardComponent({
       )}
 
       <Pressable
-        style={StyleSheet.absoluteFill}
+        style={styles.tapLayer}
         onPress={onTogglePlayPause}
         accessibilityRole="button"
         accessibilityLabel={pausedByUser ? 'Play video' : 'Pause video'}
@@ -126,7 +142,7 @@ function VideoCardComponent({
 
       <VideoControls
         title={video.title}
-        isFavorite={video.isFavorite}
+        isFavorite={Boolean(video.isFavorite)}
         progress={progress}
         unavailable={unavailable}
         onFavorite={() => onFavorite?.(video.id)}
@@ -160,10 +176,19 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     backgroundColor: colors.background,
-    overflow: 'hidden',
   },
   video: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  tapLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    // Leave the right action rail (heart / more) free so favorite taps work
+    right: 72,
+    backgroundColor: 'transparent',
   },
   fallback: {
     ...StyleSheet.absoluteFillObject,

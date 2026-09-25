@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef} from 'react';
-import {Dimensions, FlatList, StyleSheet, View} from 'react-native';
+import {Dimensions, FlatList, Platform, StyleSheet, View} from 'react-native';
 import {useVideoPlayback} from '../../hooks/useVideoPlayback';
 import {VideoCard} from '../VideoCard';
 
@@ -138,7 +138,7 @@ export function VideoFeed({
       initialNumToRender={2}
       maxToRenderPerBatch={2}
       windowSize={3}
-      removeClippedSubviews
+      removeClippedSubviews={Platform.OS !== 'android'}
       initialScrollIndex={Math.min(initialIndex, Math.max(videos.length - 1, 0))}
       onScrollToIndexFailed={info => {
         setTimeout(() => {

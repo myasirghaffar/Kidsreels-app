@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">KidsReels</string>
+    <string name="app_name">Orhan</string>
+    <string moduleConfig="true" name="CodePushDeploymentKey">TJgmKnUQdfDnl-UyTvefTBfwItilVJBIloS14l</string>
+    <string moduleConfig="true" name="CodePushServerUrl">https://api.revopush.org</string>
 </resources>

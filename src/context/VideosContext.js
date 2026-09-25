@@ -82,8 +82,16 @@ export function VideosProvider({children}) {
   }, []);
 
   const toggleFavorite = useCallback(async id => {
+    const current = (await videoStorage.getVideos()).find(item => item.id === id);
     const next = await videoStorage.toggleFavorite(id);
     setVideos(next);
+    const nowFav = next.find(item => item.id === id)?.isFavorite;
+    if (nowFav) {
+      setImportMessage('Added to Favorites ♥');
+    } else if (current) {
+      setImportMessage('Removed from Favorites');
+    }
+    setTimeout(() => setImportMessage(''), 1600);
     return next;
   }, []);
 
