@@ -32,7 +32,6 @@ function VideoCardComponent({
   const [errorMessage, setErrorMessage] = useState('');
   const [ready, setReady] = useState(false);
 
-  // Reset decode state when the source changes so poster/texture rebind correctly
   React.useEffect(() => {
     setReady(false);
     setUnavailable(false);
@@ -89,36 +88,53 @@ function VideoCardComponent({
   }, [onRemove, video.id, video.title]);
 
   return (
-    <View style={[styles.container, {height}]}>
-      {shouldMountPlayer && !unavailable ? (
-        <Video
-          source={{uri: video.uri}}
+    <View style={[styles.container, {height}]} collapsable={false}>
+      {/* Thumbnail under the player — never use RN Video poster (can stick on Android). */}
+      {video.thumbnailUri && !ready ? (
+        <Image
+          source={{uri: video.thumbnailUri}}
           style={styles.video}
           resizeMode="cover"
-          paused={paused}
-          repeat
-          muted={muted}
-          ignoreSilentSwitch="ignore"
-          playInBackground={false}
-          playWhenInactive={false}
-          // TextureView avoids Android black-frame + audio-only when overlays sit on top
-          useTextureView={Platform.OS === 'android'}
-          viewType={Platform.OS === 'android' ? ViewType.TEXTURE : undefined}
-          shutterColor="transparent"
-          disableFocus
-          onLoad={() => setReady(true)}
-          onReadyForDisplay={() => setReady(true)}
-          onProgress={onProgress}
-          onBuffer={({isBuffering}) => setBuffering(Boolean(isBuffering))}
-          onError={onError}
-          progressUpdateInterval={250}
-          poster={ready ? undefined : video.thumbnailUri || undefined}
-          posterResizeMode="cover"
         />
+      ) : null}
+
+      {shouldMountPlayer && !unavailable ? (
+        <View style={styles.playerShell} collapsable={false}>
+          <Video
+            key={`player-${video.id}`}
+            source={{uri: video.uri}}
+            style={styles.videoFill}
+            resizeMode="cover"
+            paused={paused}
+            repeat
+            muted={muted}
+            ignoreSilentSwitch="ignore"
+            playInBackground={false}
+            playWhenInactive={false}
+            // TextureView composites under RN overlays; SurfaceView often = black + audio
+            useTextureView={Platform.OS === 'android'}
+            viewType={
+              Platform.OS === 'android' ? ViewType.TEXTURE : undefined
+            }
+            shutterColor="transparent"
+            disableFocus
+            controls={false}
+            onLoad={() => setReady(true)}
+            onReadyForDisplay={() => setReady(true)}
+            onProgress={onProgress}
+            onBuffer={({isBuffering}) => setBuffering(Boolean(isBuffering))}
+            onError={onError}
+            progressUpdateInterval={250}
+          />
+        </View>
       ) : (
         <View style={styles.fallback}>
           {video.thumbnailUri ? (
-            <Image source={{uri: video.thumbnailUri}} style={styles.video} />
+            <Image
+              source={{uri: video.thumbnailUri}}
+              style={styles.video}
+              resizeMode="cover"
+            />
           ) : (
             <View style={[styles.video, styles.placeholder]} />
           )}
@@ -175,24 +191,33 @@ export const VideoCard = memo(VideoCardComponent, areEqual);
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: colors.background,
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
+  playerShell: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+    // No elevation — elevation on siblings hides TextureView on many Android OEMs
   },
   video: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000',
+  },
+  videoFill: {
+    ...StyleSheet.absoluteFillObject,
   },
   tapLayer: {
     position: 'absolute',
     top: 0,
     left: 0,
     bottom: 0,
-    // Leave the right action rail (heart / more) free so favorite taps work
     right: 72,
     backgroundColor: 'transparent',
+    zIndex: 5,
   },
   fallback: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background,
+    backgroundColor: '#000',
   },
   placeholder: {
     backgroundColor: colors.backgroundElevated,

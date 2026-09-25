@@ -54,6 +54,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
+    zIndex: 10,
   },
   badge: {
     width: 72,

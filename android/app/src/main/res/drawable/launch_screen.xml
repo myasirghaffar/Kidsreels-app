@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solid color only first frame — avoid decoding a large bitmap as windowBackground
+         (drawable/ mdpi scaling of 1080x1920 caused OOM crash on real devices). -->
     <item android:drawable="@color/splash_background" />
     <item>
         <bitmap
-            android:gravity="fill"
+            android:gravity="center"
             android:src="@drawable/splash_brand" />
     </item>
 </layer-list>

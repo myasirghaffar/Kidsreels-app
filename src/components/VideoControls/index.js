@@ -16,15 +16,13 @@ function VideoControlsComponent({
   unavailable,
 }) {
   const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom, 8) + TAB_BAR_CONTENT + 28;
-  const topPad = Math.max(insets.top, 12);
+  // TikTok-style: meta + actions sit above the tab bar, never under status bar
+  const bottomPad = Math.max(insets.bottom, 8) + TAB_BAR_CONTENT + 12;
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.container, {paddingBottom: bottomPad, paddingTop: topPad}]}>
+    <View pointerEvents="box-none" style={styles.container}>
       <View
-        style={[styles.rightRail, {bottom: bottomPad + 72}]}
+        style={[styles.rightRail, {bottom: bottomPad + 56}]}
         pointerEvents="box-none">
         <Pressable
           onPress={onFavorite}
@@ -68,7 +66,9 @@ function VideoControlsComponent({
         ) : null}
       </View>
 
-      <View style={styles.bottomMeta} pointerEvents="none">
+      <View
+        style={[styles.bottomMeta, {paddingBottom: bottomPad}]}
+        pointerEvents="none">
         <Text style={styles.title} numberOfLines={2}>
           {title || 'Local video'}
         </Text>
@@ -77,7 +77,7 @@ function VideoControlsComponent({
           <View
             style={[
               styles.progressFill,
-              {width: `${Math.min(100, progress * 100)}%`},
+              {width: `${Math.min(100, Math.max(0, progress * 100))}%`},
             ]}
           />
         </View>
@@ -94,9 +94,8 @@ export const VideoControls = memo(VideoControlsComponent);
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
     zIndex: 20,
-    elevation: 20,
+    // No Android elevation — it punches TextureView black under overlays
   },
   rightRail: {
     position: 'absolute',
@@ -104,7 +103,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     zIndex: 30,
-    elevation: 30,
   },
   action: {
     minWidth: 56,
@@ -143,8 +141,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bottomMeta: {
+    position: 'absolute',
+    left: 0,
+    right: 80,
+    bottom: 0,
     paddingHorizontal: spacing.lg,
-    maxWidth: '78%',
   },
   title: {
     ...typography.subtitle,
