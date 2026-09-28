@@ -1,7 +1,9 @@
 import {Alert, Platform} from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {
+  clearPendingVideoPick,
   isPermissionGranted,
+  markPendingVideoPick,
   requestMediaPermission,
   showPermissionDeniedAlert,
 } from '../utils/permissions';
@@ -14,17 +16,11 @@ import {
 import {takePersistableReadPermission} from './uriPermission';
 import {generateThumbnail} from './thumbnailService';
 
-/**
- * Open the native media picker for local videos only.
- * Returns metadata with URI references — videos are not copied into app storage.
- */
-export async function pickLocalVideos() {
-  const permission = await requestMediaPermission();
-  if (!isPermissionGranted(permission)) {
-    showPermissionDeniedAlert();
-    return {cancelled: true, videos: [], denied: true};
-  }
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
+async function openVideoLibrary() {
   const response = await launchImageLibrary({
     mediaType: 'video',
     selectionLimit: 0,
@@ -59,7 +55,13 @@ export async function pickLocalVideos() {
 
     await takePersistableReadPermission(uri);
 
-    const thumbnailUri = await generateThumbnail(uri);
+    let thumbnailUri = null;
+    try {
+      thumbnailUri = await generateThumbnail({uri});
+    } catch (_) {
+      thumbnailUri = null;
+    }
+
     videos.push({
       id: createVideoId(),
       uri,
@@ -73,4 +75,39 @@ export async function pickLocalVideos() {
   }
 
   return {cancelled: false, videos};
+}
+
+/**
+ * Open the native media picker for local videos only.
+ * Returns metadata with URI references — videos are not copied into app storage.
+ *
+ * First-time permission on some Android OEMs recreates the Activity. We mark a
+ * pending pick so the app can reopen the library after remount instead of
+ * forcing the user to tap Add again.
+ */
+export async function pickLocalVideos({fromPendingResume = false} = {}) {
+  const {status, justGranted} = await requestMediaPermission();
+  if (!isPermissionGranted(status)) {
+    await clearPendingVideoPick();
+    showPermissionDeniedAlert();
+    return {cancelled: true, videos: [], denied: true};
+  }
+
+  if (justGranted && !fromPendingResume) {
+    // Permission dialog may remount RN. Persist intent, then try to continue.
+    await markPendingVideoPick();
+    await delay(400);
+  }
+
+  // Clear before opening so returning from the picker won't reopen it.
+  await clearPendingVideoPick();
+
+  try {
+    return await openVideoLibrary();
+  } catch (error) {
+    if (justGranted) {
+      await markPendingVideoPick();
+    }
+    throw error;
+  }
 }

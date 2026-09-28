@@ -4,10 +4,12 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import * as videoStorage from '../storage/videoStorage';
 import {pickLocalVideos} from '../services/mediaPicker';
+import {consumePendingVideoPick} from '../utils/permissions';
 
 const VideosContext = createContext(null);
 
@@ -17,12 +19,22 @@ export function VideosProvider({children}) {
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [error, setError] = useState(null);
+  const pickingRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
       setError(null);
       const next = await videoStorage.getVideos();
       setVideos(next);
+      // Backfill Library previews for default/bundled clips in the background.
+      videoStorage
+        .ensureMissingThumbnails()
+        .then(withThumbs => {
+          if (withThumbs?.length) {
+            setVideos(withThumbs);
+          }
+        })
+        .catch(() => {});
       return next;
     } catch (err) {
       setError(err.message || 'Failed to load videos');
@@ -36,11 +48,15 @@ export function VideosProvider({children}) {
     refresh();
   }, [refresh]);
 
-  const addFromPicker = useCallback(async () => {
+  const addFromPicker = useCallback(async ({fromPendingResume = false} = {}) => {
+    if (pickingRef.current) {
+      return {added: 0, cancelled: true};
+    }
+    pickingRef.current = true;
     try {
       setImporting(true);
       setImportMessage('Opening your videos…');
-      const result = await pickLocalVideos();
+      const result = await pickLocalVideos({fromPendingResume});
       if (result.cancelled || !result.videos.length) {
         setImportMessage('');
         return {added: 0, cancelled: true, denied: result.denied};
@@ -59,9 +75,33 @@ export function VideosProvider({children}) {
       setError(err.message || 'Could not add videos');
       return {added: 0, cancelled: false, error: err};
     } finally {
+      pickingRef.current = false;
       setImporting(false);
     }
   }, []);
+
+  // After first-time permission, Android may remount the Activity. Resume pick.
+  useEffect(() => {
+    let cancelled = false;
+
+    const resumeIfNeeded = async () => {
+      const pending = await consumePendingVideoPick();
+      if (!pending || cancelled || pickingRef.current) {
+        return;
+      }
+      setTimeout(() => {
+        if (!cancelled && !pickingRef.current) {
+          addFromPicker({fromPendingResume: true});
+        }
+      }, 600);
+    };
+
+    resumeIfNeeded();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addFromPicker]);
 
   const removeVideo = useCallback(async id => {
     const next = await videoStorage.removeVideo(id);

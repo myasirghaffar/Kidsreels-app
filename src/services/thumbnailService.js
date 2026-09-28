@@ -1,13 +1,42 @@
+import {Image} from 'react-native';
 import {createThumbnail} from 'react-native-create-thumbnail';
+import {getBundledVideoAsset} from '../assets/videos';
 import {normalizeLocalUri} from '../utils/videoUtils';
+
+/**
+ * Resolve a playable file/content URI for gallery clips or bundled shorts.
+ */
+export function resolveVideoSourceUri(videoOrUri) {
+  if (videoOrUri && typeof videoOrUri === 'object') {
+    if (videoOrUri.bundledAssetKey) {
+      const asset = getBundledVideoAsset(videoOrUri.bundledAssetKey);
+      if (asset == null) {
+        return null;
+      }
+      const resolved = Image.resolveAssetSource(asset);
+      return resolved?.uri || null;
+    }
+    return normalizeLocalUri(videoOrUri.uri);
+  }
+  return normalizeLocalUri(videoOrUri);
+}
 
 /**
  * Generate a local thumbnail file for Library grid display.
  * Thumbnails are small cached JPEGs; source videos are never copied.
  */
-export async function generateThumbnail(uri, timeStamp = 1000) {
-  const source = normalizeLocalUri(uri);
-  if (!source) {
+export async function generateThumbnail(videoOrUri, timeStamp = 800) {
+  // Bundled packager assets crash MediaMetadataRetriever on Android.
+  if (
+    videoOrUri &&
+    typeof videoOrUri === 'object' &&
+    videoOrUri.bundledAssetKey
+  ) {
+    return null;
+  }
+
+  const source = resolveVideoSourceUri(videoOrUri);
+  if (!source || source.startsWith('bundled://')) {
     return null;
   }
 
@@ -33,7 +62,7 @@ export async function generateThumbnailsForVideos(videos, onProgress) {
     if (video.thumbnailUri) {
       updated.push(video);
     } else {
-      const thumbnailUri = await generateThumbnail(video.uri);
+      const thumbnailUri = await generateThumbnail(video);
       updated.push({...video, thumbnailUri});
     }
     if (onProgress) {

@@ -19,9 +19,9 @@ export function usePermissions() {
   }, [refresh]);
 
   const request = useCallback(async () => {
-    const next = await requestMediaPermission();
-    setStatus(next);
-    return next;
+    const result = await requestMediaPermission();
+    setStatus(result.status);
+    return result.status;
   }, []);
 
   return {

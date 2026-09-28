@@ -1,6 +1,7 @@
 import React, {useCallback} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {HomeScreen} from '../screens/HomeScreen';
 import {FavoritesScreen} from '../screens/FavoritesScreen';
@@ -74,15 +75,23 @@ function AddPlaceholder() {
 
 export function MainTabs() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const {addFromPicker} = useVideos();
   const bottomPad = Math.max(insets.bottom, 10);
 
   const onAddTabPress = useCallback(
-    e => {
+    async e => {
       e.preventDefault();
-      addFromPicker();
+      const result = await addFromPicker();
+      if (result?.added > 0) {
+        // Newest imports are prepended — open Home on the first item.
+        navigation.navigate('Home', {
+          startIndex: 0,
+          focusToken: Date.now(),
+        });
+      }
     },
-    [addFromPicker],
+    [addFromPicker, navigation],
   );
 
   const renderAddButton = useCallback(
@@ -159,7 +168,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tabBar,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-    ...shadows.soft,
+    elevation: 0,
   },
   tabBarItem: {
     flex: 1,
