@@ -92,6 +92,8 @@ export function MainTabs() {
 
   return (
     <Tab.Navigator
+      // Keep Home's video surface attached on Android — detaching causes black frames.
+      detachInactiveScreens={false}
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,

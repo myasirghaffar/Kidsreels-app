@@ -6,4 +6,4 @@ export {
   REVOPUSH_SERVER_URL,
 } from './codePushConfig';
 export {registerAppWithCodePush} from './registerAppWithCodePush';
-export {syncOtaOnLaunch} from './otaSync';
+export {OTA_SYNC_STATUS, syncOtaManually, syncOtaOnLaunch} from './otaSync';

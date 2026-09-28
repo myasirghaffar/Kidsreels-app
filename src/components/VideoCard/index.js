@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import Video, {ViewType} from 'react-native-video';
+import {getBundledVideoAsset} from '../../assets/videos';
 import {colors} from '../../theme';
 import {VideoControls} from '../VideoControls';
 import {VideoOverlay} from '../VideoOverlay';
@@ -31,6 +32,7 @@ function VideoCardComponent({
   const [unavailable, setUnavailable] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [ready, setReady] = useState(false);
+  const bundledSource = getBundledVideoAsset(video.bundledAssetKey);
 
   React.useEffect(() => {
     setReady(false);
@@ -89,57 +91,45 @@ function VideoCardComponent({
 
   return (
     <View style={[styles.container, {height}]} collapsable={false}>
-      {/* Thumbnail under the player — never use RN Video poster (can stick on Android). */}
-      {video.thumbnailUri && !ready ? (
-        <Image
-          source={{uri: video.thumbnailUri}}
+      {/* Player fills the page. TextureView so RN overlays don't punch a black hole. */}
+      {shouldMountPlayer && !unavailable ? (
+        <Video
+          key={`player-${video.id}`}
+          source={bundledSource || {uri: video.uri}}
           style={styles.video}
           resizeMode="cover"
+          paused={paused}
+          repeat
+          muted={muted}
+          ignoreSilentSwitch="ignore"
+          playInBackground={false}
+          playWhenInactive={false}
+          useTextureView={Platform.OS === 'android'}
+          viewType={Platform.OS === 'android' ? ViewType.TEXTURE : undefined}
+          shutterColor="transparent"
+          disableFocus
+          controls={false}
+          onReadyForDisplay={() => setReady(true)}
+          onProgress={onProgress}
+          onBuffer={({isBuffering}) => setBuffering(Boolean(isBuffering))}
+          onError={onError}
+          progressUpdateInterval={250}
         />
       ) : null}
 
-      {shouldMountPlayer && !unavailable ? (
-        <View style={styles.playerShell} collapsable={false}>
-          <Video
-            key={`player-${video.id}`}
-            source={{uri: video.uri}}
-            style={styles.videoFill}
-            resizeMode="cover"
-            paused={paused}
-            repeat
-            muted={muted}
-            ignoreSilentSwitch="ignore"
-            playInBackground={false}
-            playWhenInactive={false}
-            // TextureView composites under RN overlays; SurfaceView often = black + audio
-            useTextureView={Platform.OS === 'android'}
-            viewType={
-              Platform.OS === 'android' ? ViewType.TEXTURE : undefined
-            }
-            shutterColor="transparent"
-            disableFocus
-            controls={false}
-            onLoad={() => setReady(true)}
-            onReadyForDisplay={() => setReady(true)}
-            onProgress={onProgress}
-            onBuffer={({isBuffering}) => setBuffering(Boolean(isBuffering))}
-            onError={onError}
-            progressUpdateInterval={250}
-          />
-        </View>
-      ) : (
-        <View style={styles.fallback}>
-          {video.thumbnailUri ? (
-            <Image
-              source={{uri: video.thumbnailUri}}
-              style={styles.video}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.video, styles.placeholder]} />
-          )}
-        </View>
-      )}
+      {/* Poster only until first frame — kept UNDER controls, not as Video poster prop */}
+      {(!shouldMountPlayer || !ready || unavailable) && video.thumbnailUri ? (
+        <Image
+          source={{uri: video.thumbnailUri}}
+          style={styles.poster}
+          resizeMode="cover"
+          pointerEvents="none"
+        />
+      ) : null}
+
+      {!shouldMountPlayer && !video.thumbnailUri ? (
+        <View style={[styles.video, styles.placeholder]} />
+      ) : null}
 
       <Pressable
         style={styles.tapLayer}
@@ -149,10 +139,10 @@ function VideoCardComponent({
       />
 
       <VideoOverlay
-        visible={isActive && showPlayHint}
+        visible={isActive && (showPlayHint || pausedByUser)}
         paused={pausedByUser}
         unavailable={unavailable}
-        buffering={isActive && buffering}
+        buffering={isActive && buffering && !ready}
         errorMessage={errorMessage}
       />
 
@@ -173,6 +163,7 @@ function areEqual(prev, next) {
   return (
     prev.video.id === next.video.id &&
     prev.video.uri === next.video.uri &&
+    prev.video.bundledAssetKey === next.video.bundledAssetKey &&
     prev.video.isFavorite === next.video.isFavorite &&
     prev.video.title === next.video.title &&
     prev.video.thumbnailUri === next.video.thumbnailUri &&
@@ -194,17 +185,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     overflow: 'hidden',
   },
-  playerShell: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-    // No elevation — elevation on siblings hides TextureView on many Android OEMs
-  },
   video: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
   },
-  videoFill: {
+  poster: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   tapLayer: {
     position: 'absolute',
@@ -212,12 +198,7 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     right: 72,
-    backgroundColor: 'transparent',
     zIndex: 5,
-  },
-  fallback: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
   },
   placeholder: {
     backgroundColor: colors.backgroundElevated,

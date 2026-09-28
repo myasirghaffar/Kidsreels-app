@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {DEFAULT_VIDEOS} from '../assets/videos';
 
 const STORAGE_KEY = '@kidsreels/videos_v1';
+const DEFAULTS_SEEDED_KEY = '@kidsreels/default_videos_seeded_v1';
 
 async function readAll() {
   try {
@@ -31,7 +33,24 @@ function sortByPosition(videos) {
 }
 
 export async function getVideos() {
-  return sortByPosition(await readAll());
+  const existing = await readAll();
+  const defaultsSeeded = await AsyncStorage.getItem(DEFAULTS_SEEDED_KEY);
+
+  if (defaultsSeeded === 'true') {
+    return sortByPosition(existing);
+  }
+
+  const existingIds = new Set(existing.map(item => item.id));
+  const missingDefaults = DEFAULT_VIDEOS.filter(
+    item => !existingIds.has(item.id),
+  );
+  const next = [...missingDefaults, ...sortByPosition(existing)].map(
+    (item, index) => ({...item, position: index}),
+  );
+
+  await writeAll(next);
+  await AsyncStorage.setItem(DEFAULTS_SEEDED_KEY, 'true');
+  return next;
 }
 
 export async function addVideos(newVideos = []) {
@@ -49,6 +68,7 @@ export async function addVideos(newVideos = []) {
   const stamped = uniqueIncoming.map((item, index) => ({
     id: item.id,
     uri: item.uri,
+    bundledAssetKey: item.bundledAssetKey || null,
     title: item.title || `Video ${basePosition + index + 1}`,
     thumbnailUri: item.thumbnailUri || null,
     duration: typeof item.duration === 'number' ? item.duration : 0,

@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
-import {Dimensions, FlatList, Platform, StyleSheet, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {FlatList, StyleSheet, View} from 'react-native';
 import {useVideoPlayback} from '../../hooks/useVideoPlayback';
 import {VideoCard} from '../VideoCard';
 
@@ -14,7 +14,9 @@ export function VideoFeed({
   onRemove,
 }) {
   const listRef = useRef(null);
-  const screenHeight = Dimensions.get('window').height;
+  // Must match the FlatList viewport (area above tab bar), NOT window height —
+  // otherwise bottom TikTok controls render off-screen and the player layout breaks.
+  const [pageHeight, setPageHeight] = useState(0);
   const {
     activeIndex,
     setActive,
@@ -31,7 +33,7 @@ export function VideoFeed({
   }, [videos]);
 
   useEffect(() => {
-    if (!videos.length) {
+    if (!videos.length || pageHeight <= 0) {
       return;
     }
     const clamped = Math.min(Math.max(initialIndex, 0), videos.length - 1);
@@ -39,7 +41,7 @@ export function VideoFeed({
     requestAnimationFrame(() => {
       listRef.current?.scrollToIndex({index: clamped, animated: false});
     });
-  }, [initialIndex, setActive, videos.length]);
+  }, [initialIndex, pageHeight, setActive, videos.length]);
 
   const onViewableItemsChanged = useRef(({viewableItems}) => {
     if (!viewableItems?.length) {
@@ -65,28 +67,34 @@ export function VideoFeed({
 
   const getItemLayout = useCallback(
     (_data, index) => ({
-      length: screenHeight,
-      offset: screenHeight * index,
+      length: pageHeight,
+      offset: pageHeight * index,
       index,
     }),
-    [screenHeight],
+    [pageHeight],
   );
+
+  const onLayout = useCallback(event => {
+    const next = Math.round(event.nativeEvent.layout.height);
+    if (next > 0) {
+      setPageHeight(prev => (prev === next ? prev : next));
+    }
+  }, []);
 
   const renderItem = useCallback(
     ({item, index}) => {
       if (item.__wrap) {
-        return <View style={[styles.wrapPage, {height: screenHeight}]} />;
+        return <View style={[styles.wrapPage, {height: pageHeight}]} />;
       }
 
       const isActive = index === activeIndex;
-      const shouldMountPlayer = Math.abs(index - activeIndex) <= 1;
 
       return (
         <VideoCard
           video={item}
-          height={screenHeight}
+          height={pageHeight}
           isActive={isActive}
-          shouldMountPlayer={shouldMountPlayer}
+          shouldMountPlayer={isActive}
           autoplay={autoplay}
           muted={muted}
           pausedByUser={isActive ? pausedByUser : true}
@@ -103,8 +111,8 @@ export function VideoFeed({
       muted,
       onFavorite,
       onRemove,
+      pageHeight,
       pausedByUser,
-      screenHeight,
       showPlayHint,
       togglePlayPause,
     ],
@@ -117,43 +125,54 @@ export function VideoFeed({
   }
 
   return (
-    <FlatList
-      ref={listRef}
-      data={data}
-      keyExtractor={keyExtractor}
-      renderItem={renderItem}
-      pagingEnabled
-      showsVerticalScrollIndicator={false}
-      showsHorizontalScrollIndicator={false}
-      horizontal={false}
-      bounces={false}
-      overScrollMode="never"
-      decelerationRate="fast"
-      snapToInterval={screenHeight}
-      snapToAlignment="start"
-      disableIntervalMomentum
-      getItemLayout={getItemLayout}
-      onViewableItemsChanged={onViewableItemsChanged}
-      viewabilityConfig={viewabilityConfig}
-      initialNumToRender={2}
-      maxToRenderPerBatch={2}
-      windowSize={3}
-      removeClippedSubviews={Platform.OS !== 'android'}
-      initialScrollIndex={Math.min(initialIndex, Math.max(videos.length - 1, 0))}
-      onScrollToIndexFailed={info => {
-        setTimeout(() => {
-          listRef.current?.scrollToIndex({
-            index: info.index,
-            animated: false,
-          });
-        }, 100);
-      }}
-      style={styles.list}
-    />
+    <View style={styles.host} onLayout={onLayout}>
+      {pageHeight > 0 ? (
+        <FlatList
+          ref={listRef}
+          data={data}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          pagingEnabled
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          horizontal={false}
+          bounces={false}
+          overScrollMode="never"
+          decelerationRate="fast"
+          snapToInterval={pageHeight}
+          snapToAlignment="start"
+          disableIntervalMomentum
+          getItemLayout={getItemLayout}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          initialNumToRender={2}
+          maxToRenderPerBatch={2}
+          windowSize={3}
+          removeClippedSubviews={false}
+          initialScrollIndex={Math.min(
+            initialIndex,
+            Math.max(videos.length - 1, 0),
+          )}
+          onScrollToIndexFailed={info => {
+            setTimeout(() => {
+              listRef.current?.scrollToIndex({
+                index: info.index,
+                animated: false,
+              });
+            }, 100);
+          }}
+          style={styles.list}
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  host: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
   list: {
     flex: 1,
     backgroundColor: '#000',

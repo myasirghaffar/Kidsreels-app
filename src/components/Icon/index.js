@@ -19,6 +19,7 @@ const GLYPHS = {
   mute: '🔇',
   unmute: '🔊',
   grip: '☰',
+  update: '↻',
 };
 
 export function Icon({name, size = 22, color = colors.text, style}) {

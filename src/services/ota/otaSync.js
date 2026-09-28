@@ -12,6 +12,8 @@ function isCodePushAvailable() {
   );
 }
 
+export const OTA_SYNC_STATUS = codePush?.SyncStatus || {};
+
 /**
  * Silent background sync on launch. Update installs on next restart.
  * Uses setTimeout only — InteractionManager is undefined under RN bridgeless
@@ -33,4 +35,30 @@ export function syncOtaOnLaunch() {
         // Silent — network / offline failures should not disturb playback.
       });
   }, LAUNCH_SYNC_DEFER_MS);
+}
+
+/**
+ * User-initiated update check. Available updates install immediately and
+ * CodePush restarts the app after installation.
+ */
+export function syncOtaManually(onStatusChange, onDownloadProgress) {
+  if (__DEV__) {
+    return Promise.reject(
+      new Error('OTA updates are only available in an installed release build.'),
+    );
+  }
+
+  if (!isCodePushAvailable()) {
+    return Promise.reject(new Error('OTA update service is unavailable.'));
+  }
+
+  return codePush.sync(
+    {
+      deploymentKey: ACTIVE_DEPLOYMENT_KEY,
+      installMode: codePush.InstallMode.IMMEDIATE,
+      mandatoryInstallMode: codePush.InstallMode.IMMEDIATE,
+    },
+    onStatusChange,
+    onDownloadProgress,
+  );
 }

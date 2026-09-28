@@ -1,5 +1,6 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -13,6 +14,10 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useSettings} from '../../context/SettingsContext';
 import {useVideos} from '../../hooks/useVideos';
 import {Icon} from '../../components/Icon';
+import {
+  OTA_SYNC_STATUS,
+  syncOtaManually,
+} from '../../services/ota';
 import {colors, radii, shadows, spacing, typography} from '../../theme';
 
 function SectionLabel({children}) {
@@ -63,9 +68,59 @@ function ActionTile({icon, label, color, bg, onPress, accessibilityLabel}) {
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const [otaBusy, setOtaBusy] = useState(false);
+  const [otaMessage, setOtaMessage] = useState('Check for the latest update');
   const {settings, setAutoplay, setMuteByDefault} = useSettings();
   const {videos, clearVideos, addFromPicker, importing} = useVideos();
   const favoritesCount = videos.filter(v => v.isFavorite).length;
+
+  const checkForOtaUpdate = useCallback(async () => {
+    if (otaBusy) {
+      return;
+    }
+
+    setOtaBusy(true);
+    setOtaMessage('Checking for update…');
+
+    try {
+      const result = await syncOtaManually(
+        status => {
+          if (status === OTA_SYNC_STATUS.CHECKING_FOR_UPDATE) {
+            setOtaMessage('Checking for update…');
+          } else if (status === OTA_SYNC_STATUS.DOWNLOADING_PACKAGE) {
+            setOtaMessage('Downloading update…');
+          } else if (status === OTA_SYNC_STATUS.INSTALLING_UPDATE) {
+            setOtaMessage('Installing update…');
+          } else if (status === OTA_SYNC_STATUS.UPDATE_INSTALLED) {
+            setOtaMessage('Restarting with the update…');
+          }
+        },
+        ({receivedBytes, totalBytes}) => {
+          if (totalBytes > 0) {
+            const percent = Math.round((receivedBytes / totalBytes) * 100);
+            setOtaMessage(`Downloading update… ${percent}%`);
+          }
+        },
+      );
+
+      if (result === OTA_SYNC_STATUS.UP_TO_DATE) {
+        setOtaMessage('App is up to date');
+        Alert.alert('No update available', 'You already have the latest version.');
+      } else if (result === OTA_SYNC_STATUS.SYNC_IN_PROGRESS) {
+        setOtaMessage('An update check is already running');
+        Alert.alert('Update in progress', 'Please try again in a moment.');
+      } else if (result === OTA_SYNC_STATUS.UPDATE_IGNORED) {
+        setOtaMessage('Update cancelled');
+      }
+    } catch (error) {
+      const message =
+        error?.message || 'Could not check for updates. Please try again.';
+      setOtaMessage('Update check failed');
+      Alert.alert('Update unavailable', message);
+    } finally {
+      setOtaBusy(false);
+    }
+  }, [otaBusy]);
 
   const confirmClear = () => {
     Alert.alert(
@@ -231,6 +286,34 @@ export function SettingsScreen() {
         </Pressable>
       </View>
 
+      <SectionLabel>App updates</SectionLabel>
+      <View style={[styles.card, shadows.card]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Check for OTA update"
+          accessibilityHint="Downloads and installs the latest available app update"
+          onPress={checkForOtaUpdate}
+          disabled={otaBusy}
+          style={({pressed}) => [
+            styles.linkRow,
+            pressed && styles.rowPressed,
+            otaBusy && styles.disabledRow,
+          ]}>
+          <View style={[styles.iconBadge, styles.updateIconBadge]}>
+            {otaBusy ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Icon name="update" size={24} color={colors.primary} />
+            )}
+          </View>
+          <View style={styles.settingCopy}>
+            <Text style={styles.rowLabel}>Check for update</Text>
+            <Text style={styles.rowHint}>{otaMessage}</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      </View>
+
       <SectionLabel>About</SectionLabel>
       <View style={[styles.aboutCard, shadows.card]}>
         <Text style={styles.aboutBrand}>KidsReels</Text>
@@ -382,6 +465,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  updateIconBadge: {
+    backgroundColor: colors.accentSoft,
   },
   settingCopy: {
     flex: 1,
