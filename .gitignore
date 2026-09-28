@@ -81,5 +81,4 @@ android-apks/
 android/keystore.properties
 
 # Local env
-.env
-.env.*
+config.bat

@@ -9,10 +9,13 @@ function VideoOverlayComponent({
   unavailable,
   buffering,
   errorMessage,
+  height,
 }) {
+  const frameStyle = [styles.center, {height: height || '100%'}];
+
   if (unavailable) {
     return (
-      <View style={styles.center} pointerEvents="none">
+      <View style={frameStyle} pointerEvents="none">
         <Text style={styles.errorTitle}>Video unavailable</Text>
         <Text style={styles.errorBody}>
           {errorMessage || 'This video can no longer be opened from your device.'}
@@ -23,7 +26,7 @@ function VideoOverlayComponent({
 
   if (buffering) {
     return (
-      <View style={styles.center} pointerEvents="none">
+      <View style={frameStyle} pointerEvents="none">
         <Text style={styles.hint}>Loading…</Text>
       </View>
     );
@@ -34,7 +37,7 @@ function VideoOverlayComponent({
   }
 
   return (
-    <View style={styles.center} pointerEvents="none">
+    <View style={frameStyle} pointerEvents="none">
       <View style={styles.badge}>
         <Icon
           name={paused ? 'play' : 'pause'}
@@ -50,11 +53,15 @@ export const VideoOverlay = memo(VideoOverlayComponent);
 
 const styles = StyleSheet.create({
   center: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
     zIndex: 10,
+    elevation: 10,
   },
   badge: {
     width: 72,

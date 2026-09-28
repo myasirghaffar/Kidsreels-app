@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import Video, {ViewType} from 'react-native-video';
-import {getBundledVideoAsset} from '../../assets/videos';
+import {getBundledThumbAsset, getBundledVideoAsset} from '../../assets/videos';
 import {colors} from '../../theme';
 import {VideoControls} from '../VideoControls';
 import {VideoOverlay} from '../VideoOverlay';
@@ -33,6 +33,7 @@ function VideoCardComponent({
   const [errorMessage, setErrorMessage] = useState('');
   const [ready, setReady] = useState(false);
   const bundledSource = getBundledVideoAsset(video.bundledAssetKey);
+  const frameStyle = {width: '100%', height};
 
   React.useEffect(() => {
     setReady(false);
@@ -90,13 +91,13 @@ function VideoCardComponent({
   }, [onRemove, video.id, video.title]);
 
   return (
-    <View style={[styles.container, {height}]} collapsable={false}>
-      {/* Player fills the page. TextureView so RN overlays don't punch a black hole. */}
+    <View style={[styles.container, frameStyle]} collapsable={false}>
+      {/* Explicit width/height — absoluteFill collapses to 0 on Android Fabric. */}
       {shouldMountPlayer && !unavailable ? (
         <Video
           key={`player-${video.id}`}
           source={bundledSource || {uri: video.uri}}
-          style={styles.video}
+          style={frameStyle}
           resizeMode="cover"
           paused={paused}
           repeat
@@ -117,22 +118,28 @@ function VideoCardComponent({
         />
       ) : null}
 
-      {/* Poster only until first frame — kept UNDER controls, not as Video poster prop */}
-      {(!shouldMountPlayer || !ready || unavailable) && video.thumbnailUri ? (
+      {(!shouldMountPlayer || !ready || unavailable) &&
+      (video.thumbnailUri || getBundledThumbAsset(video.bundledAssetKey)) ? (
         <Image
-          source={{uri: video.thumbnailUri}}
-          style={styles.poster}
+          source={
+            video.thumbnailUri
+              ? {uri: video.thumbnailUri}
+              : getBundledThumbAsset(video.bundledAssetKey)
+          }
+          style={[styles.layer, frameStyle]}
           resizeMode="cover"
           pointerEvents="none"
         />
       ) : null}
 
-      {!shouldMountPlayer && !video.thumbnailUri ? (
-        <View style={[styles.video, styles.placeholder]} />
+      {!shouldMountPlayer &&
+      !video.thumbnailUri &&
+      !getBundledThumbAsset(video.bundledAssetKey) ? (
+        <View style={[frameStyle, styles.placeholder]} />
       ) : null}
 
       <Pressable
-        style={styles.tapLayer}
+        style={[styles.tapLayer, {height}]}
         onPress={onTogglePlayPause}
         accessibilityRole="button"
         accessibilityLabel={pausedByUser ? 'Play video' : 'Pause video'}
@@ -144,9 +151,11 @@ function VideoCardComponent({
         unavailable={unavailable}
         buffering={isActive && buffering && !ready}
         errorMessage={errorMessage}
+        height={height}
       />
 
       <VideoControls
+        height={height}
         title={video.title}
         isFavorite={Boolean(video.isFavorite)}
         progress={progress}
@@ -181,24 +190,22 @@ export const VideoCard = memo(VideoCardComponent, areEqual);
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
     backgroundColor: '#000',
     overflow: 'hidden',
   },
-  video: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  poster: {
-    ...StyleSheet.absoluteFillObject,
+  layer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
     zIndex: 1,
   },
   tapLayer: {
     position: 'absolute',
     top: 0,
     left: 0,
-    bottom: 0,
     right: 72,
     zIndex: 5,
+    elevation: 5,
   },
   placeholder: {
     backgroundColor: colors.backgroundElevated,

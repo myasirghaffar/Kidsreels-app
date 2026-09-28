@@ -14,14 +14,17 @@ export function HomeScreen() {
     useVideos();
   const {settings} = useSettings();
   const [startIndex, setStartIndex] = useState(0);
+  const focusToken = route.params?.focusToken;
 
   useFocusEffect(
     useCallback(() => {
       const index = route.params?.startIndex;
       if (typeof index === 'number') {
         setStartIndex(index);
+      } else if (focusToken) {
+        setStartIndex(0);
       }
-    }, [route.params?.startIndex]),
+    }, [route.params?.startIndex, focusToken]),
   );
 
   if (loading) {

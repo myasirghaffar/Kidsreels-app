@@ -32,6 +32,8 @@ export function VideoFeed({
     return [...videos, {id: WRAP_KEY, __wrap: true}];
   }, [videos]);
 
+  const topVideoId = videos[0]?.id;
+
   useEffect(() => {
     if (!videos.length || pageHeight <= 0) {
       return;
@@ -41,19 +43,27 @@ export function VideoFeed({
     requestAnimationFrame(() => {
       listRef.current?.scrollToIndex({index: clamped, animated: false});
     });
-  }, [initialIndex, pageHeight, setActive, videos.length]);
+  }, [initialIndex, pageHeight, setActive, videos.length, topVideoId]);
 
   const onViewableItemsChanged = useRef(({viewableItems}) => {
     if (!viewableItems?.length) {
       return;
     }
-    const top = viewableItems.find(item => item.isViewable);
+    // Prefer the most visible non-wrap item so the player mounts on-screen.
+    const visible = viewableItems
+      .filter(item => item.isViewable && !item.item?.__wrap)
+      .sort(
+        (a, b) =>
+          (b.percentVisible || 0) - (a.percentVisible || 0) ||
+          (a.index ?? 0) - (b.index ?? 0),
+      );
+    const top = visible[0];
     if (!top) {
-      return;
-    }
-    if (top.item?.__wrap) {
-      listRef.current?.scrollToIndex({index: 0, animated: false});
-      setActive(0);
+      const wrap = viewableItems.find(item => item.isViewable && item.item?.__wrap);
+      if (wrap) {
+        listRef.current?.scrollToIndex({index: 0, animated: false});
+        setActive(0);
+      }
       return;
     }
     if (typeof top.index === 'number') {
@@ -62,7 +72,8 @@ export function VideoFeed({
   }).current;
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 80,
+    itemVisiblePercentThreshold: 60,
+    waitForInteraction: false,
   }).current;
 
   const getItemLayout = useCallback(

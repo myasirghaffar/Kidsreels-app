@@ -38,8 +38,8 @@ function SettingToggle({icon, iconColor, iconBg, label, hint, value, onValueChan
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{false: colors.border, true: colors.secondary}}
-          thumbColor={colors.surface}
+          trackColor={{false: colors.surfaceSoft, true: colors.secondary}}
+          thumbColor={colors.textOnDark}
           accessibilityLabel={accessibilityLabel || label}
           style={styles.switch}
         />
@@ -192,7 +192,7 @@ export function SettingsScreen() {
           icon="heart"
           label="Favorites"
           color={colors.favorite}
-          bg="#FFE4EA"
+          bg={colors.favoriteSoft}
           onPress={() => navigation.navigate('Favorites')}
         />
         <ActionTile
@@ -206,15 +206,15 @@ export function SettingsScreen() {
         <ActionTile
           icon="library"
           label="Library"
-          color={colors.secondaryDark}
-          bg="#D8F5F2"
+          color={colors.secondary}
+          bg={colors.successSoft}
           onPress={() => navigation.navigate('Library')}
         />
         <ActionTile
           icon="trash"
           label="Clear"
           color={colors.danger}
-          bg="#FFE8EE"
+          bg={colors.dangerSoft}
           onPress={confirmClear}
           accessibilityLabel="Clear all videos"
         />
@@ -235,8 +235,8 @@ export function SettingsScreen() {
         <View style={styles.divider} />
         <SettingToggle
           icon={settings.muteByDefault ? 'mute' : 'unmute'}
-          iconColor={colors.secondaryDark}
-          iconBg="#D8F5F2"
+          iconColor={colors.secondary}
+          iconBg={colors.successSoft}
           label="Mute videos"
           hint="Start every video without sound"
           value={settings.muteByDefault}
@@ -276,7 +276,7 @@ export function SettingsScreen() {
             pressed && styles.rowPressed,
             videos.length === 0 && styles.disabledRow,
           ]}>
-          <View style={[styles.iconBadge, {backgroundColor: '#FFE8EE'}]}>
+          <View style={[styles.iconBadge, {backgroundColor: colors.dangerSoft}]}>
             <Icon name="trash" size={18} color={colors.danger} />
           </View>
           <View style={styles.settingCopy}>
@@ -531,8 +531,8 @@ const styles = StyleSheet.create({
   },
   offlineChip: {
     ...typography.small,
-    color: colors.secondaryDark,
-    backgroundColor: '#D8F5F2',
+    color: colors.secondary,
+    backgroundColor: colors.successSoft,
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 5,

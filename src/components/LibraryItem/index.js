@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import {colors, radii, shadows, spacing, typography} from '../../theme';
+import {getBundledThumbAsset} from '../../assets/videos';
 import {formatDuration} from '../../utils/videoUtils';
 import {Icon} from '../Icon';
 
@@ -17,6 +18,11 @@ function LibraryItemComponent({
   onPress,
   onLongPress,
 }) {
+  const bundledThumb = getBundledThumbAsset(video.bundledAssetKey);
+  const thumbSource = video.thumbnailUri
+    ? {uri: video.thumbnailUri}
+    : bundledThumb;
+
   return (
     <Pressable
       onPress={onPress}
@@ -27,8 +33,8 @@ function LibraryItemComponent({
       accessibilityHint="Long press to select"
       style={({pressed}) => [styles.card, pressed && styles.pressed]}>
       <View style={styles.thumbWrap}>
-        {video.thumbnailUri ? (
-          <Image source={{uri: video.thumbnailUri}} style={styles.thumb} />
+        {thumbSource ? (
+          <Image source={thumbSource} style={styles.thumb} />
         ) : (
           <View style={[styles.thumb, styles.thumbFallback]}>
             <Icon name="film" size={28} color={colors.textMuted} />

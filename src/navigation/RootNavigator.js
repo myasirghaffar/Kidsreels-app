@@ -1,17 +1,18 @@
 import React from 'react';
-import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
+import {NavigationContainer, DarkTheme} from '@react-navigation/native';
 import {MainTabs} from './MainTabs';
 import {colors} from '../theme';
 
 const navTheme = {
-  ...DefaultTheme,
+  ...DarkTheme,
   colors: {
-    ...DefaultTheme.colors,
-    background: colors.surfaceMuted,
+    ...DarkTheme.colors,
+    background: colors.background,
     primary: colors.primary,
-    card: colors.surface,
+    card: colors.tabBar,
     text: colors.text,
     border: colors.border,
+    notification: colors.favorite,
   },
 };
 

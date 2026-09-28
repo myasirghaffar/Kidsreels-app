@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {DEFAULT_VIDEOS} from '../assets/videos';
+import {generateThumbnail} from '../services/thumbnailService';
 
 const STORAGE_KEY = '@kidsreels/videos_v1';
 const DEFAULTS_SEEDED_KEY = '@kidsreels/default_videos_seeded_v1';
@@ -34,22 +35,53 @@ function sortByPosition(videos) {
 
 export async function getVideos() {
   const existing = await readAll();
-  const defaultsSeeded = await AsyncStorage.getItem(DEFAULTS_SEEDED_KEY);
-
-  if (defaultsSeeded === 'true') {
-    return sortByPosition(existing);
-  }
-
   const existingIds = new Set(existing.map(item => item.id));
   const missingDefaults = DEFAULT_VIDEOS.filter(
     item => !existingIds.has(item.id),
   );
-  const next = [...missingDefaults, ...sortByPosition(existing)].map(
+
+  if (!missingDefaults.length) {
+    await AsyncStorage.setItem(DEFAULTS_SEEDED_KEY, 'true');
+    return sortByPosition(existing);
+  }
+
+  // Keep user/gallery clips where they are; append any newly shipped defaults.
+  const next = [...sortByPosition(existing), ...missingDefaults].map(
     (item, index) => ({...item, position: index}),
   );
 
   await writeAll(next);
   await AsyncStorage.setItem(DEFAULTS_SEEDED_KEY, 'true');
+  return next;
+}
+
+/**
+ * Fill missing Library thumbnails for gallery imports.
+ * Bundled shorts use packaged JPEG previews — never run createThumbnail on them
+ * (MediaMetadataRetriever crashes on Android drawable/asset video URIs).
+ */
+export async function ensureMissingThumbnails() {
+  const existing = sortByPosition(await readAll());
+  let changed = false;
+  const next = [];
+
+  for (const video of existing) {
+    if (video.thumbnailUri || video.bundledAssetKey) {
+      next.push(video);
+      continue;
+    }
+    const thumbnailUri = await generateThumbnail(video);
+    if (thumbnailUri) {
+      changed = true;
+      next.push({...video, thumbnailUri});
+    } else {
+      next.push(video);
+    }
+  }
+
+  if (changed) {
+    await writeAll(next);
+  }
   return next;
 }
 
@@ -60,24 +92,33 @@ export async function addVideos(newVideos = []) {
 
   const existing = await readAll();
   const existingUris = new Set(existing.map(item => item.uri));
-  const basePosition =
-    existing.reduce((max, item) => Math.max(max, item.position ?? 0), -1) + 1;
+  const uniqueIncoming = newVideos.filter(
+    item => item?.uri && !existingUris.has(item.uri),
+  );
 
-  const uniqueIncoming = newVideos.filter(item => item?.uri && !existingUris.has(item.uri));
+  if (!uniqueIncoming.length) {
+    return sortByPosition(existing);
+  }
 
+  // Newest imports always sit at the top of Home + Library.
   const stamped = uniqueIncoming.map((item, index) => ({
     id: item.id,
     uri: item.uri,
     bundledAssetKey: item.bundledAssetKey || null,
-    title: item.title || `Video ${basePosition + index + 1}`,
+    title: item.title || `Video ${existing.length + index + 1}`,
     thumbnailUri: item.thumbnailUri || null,
     duration: typeof item.duration === 'number' ? item.duration : 0,
     addedAt: item.addedAt || Date.now(),
-    position: basePosition + index,
+    position: index,
     isFavorite: Boolean(item.isFavorite),
   }));
 
-  const next = sortByPosition([...existing, ...stamped]);
+  const shiftedExisting = sortByPosition(existing).map((item, index) => ({
+    ...item,
+    position: stamped.length + index,
+  }));
+
+  const next = [...stamped, ...shiftedExisting];
   await writeAll(next);
   return next;
 }

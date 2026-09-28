@@ -4,11 +4,11 @@ import {colors, spacing, typography} from '../../theme';
 import {Icon} from '../Icon';
 
 /**
- * TikTok-style overlay: title/progress/credit at the bottom-left,
- * fav / more on the bottom-right. Parent feed height already excludes the tab bar,
- * so only a small inner pad is needed.
+ * TikTok-style overlay pinned to the bottom of the current page.
+ * Uses an explicit height so Android Fabric does not collapse absoluteFill to 0.
  */
 function VideoControlsComponent({
+  height,
   title,
   isFavorite,
   progress = 0,
@@ -18,8 +18,9 @@ function VideoControlsComponent({
   unavailable,
 }) {
   return (
-    <View pointerEvents="box-none" style={styles.container}>
-      {/* Spacer pushes the bottom row to the visible bottom of the page */}
+    <View
+      pointerEvents="box-none"
+      style={[styles.container, {height: height || '100%'}]}>
       <View style={styles.spacer} pointerEvents="none" />
 
       <View style={styles.bottomRow} pointerEvents="box-none">
@@ -98,15 +99,18 @@ export const VideoControls = memo(VideoControlsComponent);
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 20,
-  },
-  spacer: {},
-  bottomRow: {
     position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
+    zIndex: 20,
+    elevation: 20,
+    justifyContent: 'flex-end',
+  },
+  spacer: {
+    flex: 1,
+  },
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: spacing.md,

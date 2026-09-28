@@ -8,7 +8,7 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "postinstall": "patch-package",
-    "start": "react-native start",
+    "start": "node init && react-native start",
     "test": "jest",
     "ota:release:android": "revopush release-react \"kidsreels App android\" android -d Production",
     "ota:release:ios": "revopush release-react \"kidsreels App Ios\" ios -d Production",
